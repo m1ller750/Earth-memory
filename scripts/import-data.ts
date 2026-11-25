@@ -13,7 +13,8 @@ async function main() {
     return;
   }
   const db = await getDb({ autoSeed: false });
-  await importDataset(db, IMPORTED, { log: console.info });
+  // --refresh-text also updates the summary and body of records this importer created earlier.
+  await importDataset(db, IMPORTED, { log: console.info, refreshImportedText: process.argv.includes("--refresh-text") });
   await closeDb();
 }
 

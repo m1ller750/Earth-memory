@@ -15,6 +15,8 @@ import { REFERENCE_ATTRIBUTION, type ImportedDataset, type SeedSource } from "./
 
 export interface ImportResult {
   records: number;
+  /** Imported records whose text was refreshed (only with refreshImportedText). */
+  refreshed?: number;
   languages: number;
   species: number;
   ecosystems: number;
@@ -26,7 +28,14 @@ export interface ImportOptions {
   log?: (message: string) => void;
   /** Maximum number of new Connection Engine proposals to store. */
   proposalLimit?: number;
+  /**
+   * Also update the summary and body of records this importer created earlier (recognised by their
+   * Wikipedia attribution), e.g. after a parsing fix. Records written or edited by people are never touched.
+   */
+  refreshImportedText?: boolean;
 }
+
+const IMPORTED_ATTRIBUTION_PREFIX = "Text from the Wikipedia article";
 
 const placeNames = (codes: string[]) => [codes.map((c) => countryName(c, "en")), codes.map((c) => countryName(c, "ru"))];
 
@@ -168,6 +177,32 @@ export async function importDataset(db: Database, data: ImportedDataset, options
       result.entities = rows.length;
     }
 
+    if (options.refreshImportedText) {
+      let refreshed = 0;
+      const existing = await tx
+        .select({ id: s.records.id, slug: s.records.slug, summary: s.records.summary, body: s.records.body, attribution: s.records.attribution })
+        .from(s.records)
+        .where(inArray(s.records.slug, data.records.map((r) => r.slug)));
+      const bySlug = new Map(data.records.map((r) => [r.slug, r]));
+      for (const row of existing) {
+        const r = bySlug.get(row.slug);
+        if (!r || !row.attribution.startsWith(IMPORTED_ATTRIBUTION_PREFIX) || (row.summary === r.summary && row.body === r.body)) continue;
+        const countriesList = r.countries ?? (r.country ? [r.country] : []);
+        await tx
+          .update(s.records)
+          .set({
+            summary: r.summary,
+            body: r.body,
+            searchText: buildSearchText(r.title, r.summary, r.body, r.tags, r.aliases ?? [], r.placeName, ...placeNames(countriesList)),
+            fingerprint: fingerprint(recordFingerprintText(r)),
+            updatedAt: new Date(),
+          })
+          .where(eq(s.records.id, row.id));
+        refreshed++;
+      }
+      result.refreshed = refreshed;
+    }
+
     const newRecordIds: string[] = [];
     for (const r of data.records) {
       if (recordIds.has(r.slug)) continue;
@@ -287,6 +322,7 @@ export async function importDataset(db: Database, data: ImportedDataset, options
     await tx.insert(s.auditLog).values({ actorType: "system", action: "import", details: { generator: data.generator, generatedAt: data.generatedAt, ...result } });
   });
 
+  if (result.refreshed !== undefined) log(`Refreshed the text of ${result.refreshed} previously imported records.`);
   log(
     `Imported ${result.records} records, ${result.languages} languages, ${result.species} species, ${result.ecosystems} ecosystems and ${result.entities} entities; ${result.proposals} new engine proposals.`,
   );

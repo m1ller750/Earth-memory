@@ -169,6 +169,17 @@ describe("lead text", () => {
     expect(body).not.toContain("the last known of her species");
   });
 
+  it("drops a continuation paragraph that repeats the lead with a pronunciation added", () => {
+    const lead = ["Okjökull (Ok glacier) was a glacier in western Iceland on top of the shield volcano Ok.", "The glacier was declared dead in 2014 by glaciologist Oddur Sigurðsson."];
+    const continuation = [
+      "Okjökull (Icelandic pronunciation: [ˈɔkˌjœːkʏtl̥]; Ok glacier) was a glacier in western Iceland on top of the shield volcano Ok.",
+      "A memorial plaque was unveiled at the site in 2019, addressed to the future and noting the concentration of carbon dioxide.",
+    ];
+    const { body } = summaryAndBody(lead, continuation, { minBody: 400 });
+    expect(body.match(/was a glacier in western Iceland/g)).toBeNull();
+    expect(body).toContain("memorial plaque");
+  });
+
   it("finds the paragraphs that follow the lead despite spacing differences", () => {
     const prose = ["Martha (c.1885 – September 1, 1914) was a passenger pigeon.", "Next paragraph about the zoo and its visitors in the early twentieth century."];
     expect(continuationAfterLead(prose, ["Martha (c. 1885 – September 1, 1914) was a passenger pigeon."])).toEqual([prose[1]]);

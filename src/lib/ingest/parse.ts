@@ -279,12 +279,15 @@ export function summaryAndBody(lead: string[], continuation: string[] = [], opti
   // The body continues after the summary so the record page does not repeat it.
   const restOfFirst = firstSentences.slice(used).join(" ");
   const bodyParagraphs = [restOfFirst, ...paragraphs.slice(1)].filter((p) => p.length > 0);
-  const leadKey = alnum(paragraphs.join(" "));
-  for (const extra of continuation) {
+  // Compare without asides: the article text and the API lead differ in spacing, pronunciations and
+  // parenthetical names, so "Okjökull (Icelandic pronunciation: …; Ok glacier) was…" repeats the lead.
+  const bare = (s: string) => alnum(s.replace(/\([^()]*\)/g, "").replace(/\[[^\]]*\]/g, ""));
+  const leadKey = bare(paragraphs.join(" "));
+  for (const raw of continuation) {
     if (bodyParagraphs.join("\n\n").length >= minBody) break;
-    // A paragraph that opens like text already used is a repeat (the article and the API differ in spacing).
-    const key = alnum(extra).slice(0, 50);
-    if (!leadKey.includes(key) && !bodyParagraphs.some((p) => alnum(p).includes(key))) bodyParagraphs.push(extra);
+    const extra = cleanLeadParagraph(raw);
+    const key = bare(extra).slice(0, 40);
+    if (key.length > 0 && !leadKey.includes(key) && !bodyParagraphs.some((p) => bare(p).includes(key))) bodyParagraphs.push(extra);
   }
   const kept: string[] = [];
   let length = 0;

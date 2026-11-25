@@ -37,11 +37,12 @@ async function scroll(page: Page, pixels: number, ms: number) {
 
 /** Scrolls so that the element containing `text` sits near the top of the screen. */
 async function scrollToText(page: Page, text: string, ms: number, offset = 140) {
+  // Case-insensitive: headings are often upper-cased by CSS only.
   const y = await page.evaluate((needle) => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode;
-      if (node.textContent?.includes(needle)) return (node.parentElement?.getBoundingClientRect().top ?? 0) + window.scrollY;
+      if (node.textContent?.toLowerCase().includes(needle.toLowerCase())) return (node.parentElement?.getBoundingClientRect().top ?? 0) + window.scrollY;
     }
     return null;
   }, text);
@@ -107,9 +108,9 @@ export const SCENES: Scene[] = [
   },
   {
     id: "04-record",
-    path: "/archive/okjokull",
+    path: "/archive/martha-pigeon",
     narration:
-      "Each record shows exactly where it comes from. Okjökull, the first Icelandic glacier lost to climate change, cites its Wikipedia article and Wikidata, carries its licence, and stays marked as unverified until an expert reviews it. Further down, the Memory Connection Engine proposes related records and lists the evidence for every link.",
+      "Each record shows exactly where it comes from. Martha, the last passenger pigeon, who died in 1914, cites her Wikipedia article and Wikidata, carries her licence, and stays marked as unverified until an expert reviews it. Further down, the Memory Connection Engine proposes related records and lists the evidence for every link.",
     play: async (page, ms) => {
       await wait(ms * 0.12);
       await scroll(page, 520, ms * 0.18);
@@ -189,7 +190,11 @@ export const SCENES: Scene[] = [
       const end = Date.now() + ms - 4500;
       while (Date.now() < end) {
         await wait(1500);
-        await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }));
+        // Keep the growing answer in view with the question box at the bottom of the screen (not the footer).
+        await page.evaluate(() => {
+          const box = document.querySelector("textarea")?.getBoundingClientRect();
+          if (box) window.scrollTo({ top: Math.max(0, box.bottom + window.scrollY - window.innerHeight + 90), behavior: "smooth" });
+        });
       }
     },
   },

@@ -71,6 +71,14 @@ Only public, non-sensitive records are ever sent to the provider.
 | `npm run db:reset -- --yes` | Delete all data and reseed |
 | `npm run db:backup` / `db:restore` | See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 
+## Demo video
+
+`npm run demo:video` records a narrated, subtitled walkthrough of the running app into
+`demo/earth-memory-demo.mp4` (plus `.srt`). It drives your installed Chrome with puppeteer-core at
+1920×1080, narrates with the Windows text-to-speech voice and assembles everything with FFmpeg.
+Record from a production server (`npm run build && npm start`) so no development overlay appears.
+Scenes and narration live in `scripts/demo/scenes.ts`.
+
 ## For agents: API and MCP
 
 - REST API: `/api/v1` (index at http://localhost:3000/api/v1, docs at `/developers`).

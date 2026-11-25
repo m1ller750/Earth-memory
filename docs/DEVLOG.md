@@ -2,6 +2,38 @@
 
 Newest entries first. Each entry records what was built, what was tested and what is still open.
 
+## 2026-11-25: EARTH AI live test, GitHub, demo video
+
+**AI provider.** The Grok keys supplied were not xAI keys (one from grok-api.com only had a video
+model). EARTH AI now runs through OpenRouter (`OPENROUTER_API_KEY`), default model
+`anthropic/claude-haiku-5.5`, chosen as the cheapest model from a frontier family that reliably
+follows grounded-answer instructions, returns clean JSON and translates well.
+
+**Live test of every EARTH AI function** (generative mode through OpenRouter):
+- Answers with numbered citations for glaciers, Russian-language questions about Siberian languages,
+  extinct species, Central Asian traditions, connections between civilisations and Holocaust archives.
+- Metadata suggestions return valid JSON without invented dates; translation into Russian is accurate
+  and labelled as an unverified AI interpretation.
+
+**Fixed because of the test:**
+- Ecosystem questions without a named ecosystem always fell back to the Great Barrier Reef; they now
+  match the kind asked about (glaciers, lakes, reefs… in English or Russian), spread sources across
+  several ecosystems and add matching Natural Memory records.
+- Russian intent patterns used `\b`, which JavaScript only applies to Latin letters, so questions such
+  as "Какие языки Сибири…" were not recognised; they now use Unicode lookarounds. "Retreating",
+  "melting" and "extinct" are recognised too.
+- Species questions about extinction now retrieve extinct and extinct-in-the-wild species.
+- General questions dropped filler words before full-text search, so "tell me about…" no longer
+  matches every record; excerpts given to the model are longer.
+- The translation prompt forbids adding pronunciations or notes that are not in the original.
+
+**GitHub.** Published at https://github.com/m1ller750/Earth-memory (public). Before the first commit
+every file was scanned for keys, tokens and personal data; `.env.local`, `data/` and `backups/` are
+git-ignored and commits use the GitHub noreply address.
+
+**Demo video.** `npm run demo:video` (scripts/demo) records the production app with headless Chrome,
+narrates with the Windows voice and burns in subtitles with FFmpeg.
+
 ## 2026-11-24 (later): English default, Grok key, reference-data importer
 
 **Requested:** English as the default language; fill every memory dimension (Natural Memory had no

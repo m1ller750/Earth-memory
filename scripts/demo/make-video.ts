@@ -46,8 +46,9 @@ function wingetFfmpeg(): string[] {
   return out;
 }
 
-const FFMPEG = findBinary("ffmpeg", "FFMPEG_PATH", wingetFfmpeg());
-const FFPROBE = FFMPEG.replace(/ffmpeg(\.exe)?$/i, (m) => m.replace("ffmpeg", "ffprobe"));
+let ffmpegPath: string | null = null;
+/** Resolved only when assembling, so recording works before FFmpeg is installed. */
+const FFMPEG = () => (ffmpegPath ??= findBinary("ffmpeg", "FFMPEG_PATH", wingetFfmpeg()));
 const CHROME = findBinary("chrome", "CHROME_PATH", [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
@@ -55,8 +56,7 @@ const CHROME = findBinary("chrome", "CHROME_PATH", [
   "/usr/bin/google-chrome",
 ]);
 
-const ffmpeg = (args: string[]) => execFileSync(FFMPEG, ["-hide_banner", "-loglevel", "error", "-y", ...args], { stdio: ["ignore", "inherit", "inherit"] });
-const duration = (file: string) => Number(execFileSync(FFPROBE, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8" }).trim());
+const ffmpeg = (args: string[]) => execFileSync(FFMPEG(), ["-hide_banner", "-loglevel", "error", "-y", ...args], { stdio: ["ignore", "inherit", "inherit"] });
 
 /* ------------------------------------------------------------------ narration */
 
@@ -122,56 +122,86 @@ function wrap(line: string): string {
 
 /* ------------------------------------------------------------------ footage */
 
-export async function smoothScroll(page: Page, pixels: number, ms: number) {
-  await page.evaluate(
-    (px, duration) =>
-      new Promise<void>((resolve) => {
-        const start = window.scrollY;
-        const t0 = performance.now();
-        const step = (now: number) => {
-          const k = Math.min(1, (now - t0) / duration);
-          const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-          window.scrollTo(0, start + px * ease);
-          if (k < 1) requestAnimationFrame(step);
-          else resolve();
-        };
-        requestAnimationFrame(step);
-      }),
-    pixels,
-    ms,
-  );
-}
-
-async function recordScene(page: Page, scene: Scene, seconds: number, file: string) {
-  await page.goto(`${BASE}${scene.path}`, { waitUntil: "networkidle2", timeout: 120_000 });
+/**
+ * Records a scene as timestamped JPEG frames from Chrome's screencast (DevTools protocol) and writes
+ * an FFmpeg concat list with each frame's real duration, so recording does not depend on FFmpeg.
+ */
+async function recordScene(page: Page, scene: Scene, seconds: number, dir: string) {
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  // "load" rather than network idle: pages keep long-lived connections (streaming, dev hot reload).
+  await page.goto(`${BASE}${scene.path}`, { waitUntil: "load", timeout: 120_000 });
   await page.evaluate(() => window.scrollTo(0, 0));
   if (scene.prepare) await scene.prepare(page);
   await new Promise((r) => setTimeout(r, scene.settleMs ?? 1500));
-  const recorder = await page.screencast({ path: file as `${string}.webm`, ffmpegPath: FFMPEG });
-  const started = Date.now();
+
+  const session = await page.createCDPSession();
+  const frames: Array<{ file: string; t: number }> = [];
+  session.on("Page.screencastFrame", (event: { data: string; sessionId: number; metadata: { timestamp?: number } }) => {
+    const file = `f${String(frames.length).padStart(5, "0")}.jpg`;
+    fs.writeFileSync(path.join(dir, file), Buffer.from(event.data, "base64"));
+    frames.push({ file, t: event.metadata.timestamp ?? Date.now() / 1000 });
+    session.send("Page.screencastFrameAck", { sessionId: event.sessionId }).catch(() => {});
+  });
+  const started = Date.now() / 1000;
+  await session.send("Page.startScreencast", { format: "jpeg", quality: 88, maxWidth: WIDTH, maxHeight: HEIGHT, everyNthFrame: 1 });
+  const t0 = Date.now();
   await scene.play(page, seconds * 1000);
-  const left = seconds * 1000 - (Date.now() - started);
+  const left = seconds * 1000 - (Date.now() - t0);
   if (left > 0) await new Promise((r) => setTimeout(r, left));
-  await new Promise((r) => setTimeout(r, 400));
-  await recorder.stop();
+  await new Promise((r) => setTimeout(r, 300));
+  await session.send("Page.stopScreencast");
+  await session.detach();
+  if (frames.length === 0) throw new Error(`No frames captured for ${scene.id}`);
+
+  // Frame durations from Chrome's timestamps; the first frame covers the time before it arrived.
+  const lines: string[] = [];
+  for (let i = 0; i < frames.length; i++) {
+    const start = i === 0 ? Math.min(started, frames[0].t) : frames[i].t;
+    const end = i + 1 < frames.length ? frames[i + 1].t : start + Math.max(0.1, seconds - (start - started));
+    lines.push(`file '${frames[i].file}'`, `duration ${Math.max(0.001, end - start).toFixed(4)}`);
+  }
+  lines.push(`file '${frames[frames.length - 1].file}'`);
+  fs.writeFileSync(path.join(dir, "frames.txt"), lines.join("\n"));
+  return frames.length;
 }
 
 /* ------------------------------------------------------------------ main */
+
+/** Length of a PCM WAV file in seconds (read from its header; no FFmpeg needed). */
+function wavSeconds(file: string): number {
+  const buffer = fs.readFileSync(file);
+  const byteRate = buffer.readUInt32LE(28);
+  let offset = 12;
+  while (offset + 8 <= buffer.length) {
+    const id = buffer.toString("ascii", offset, offset + 4);
+    const size = buffer.readUInt32LE(offset + 4);
+    if (id === "data") return size / byteRate;
+    offset += 8 + size + (size % 2);
+  }
+  return (buffer.length - 44) / byteRate;
+}
 
 async function main() {
   fs.mkdirSync(WORK, { recursive: true });
   fs.mkdirSync(OUT, { recursive: true });
   const only = process.argv.find((a) => a.startsWith("--only="))?.split("=")[1];
+  const stage = process.argv.find((a) => a.startsWith("--stage="))?.split("=")[1] ?? "all";
   const scenes = only ? SCENES.filter((s) => s.id === only) : SCENES;
 
-  console.info(`Narrating ${scenes.length} scenes with ${VOICE}…`);
   const timings: Array<{ scene: Scene; wav: string; seconds: number }> = [];
+  if (stage !== "assemble") console.info(`Narrating ${scenes.length} scenes with ${VOICE}…`);
   for (const scene of scenes) {
     const wav = path.join(WORK, `${scene.id}.wav`);
-    speak(scene.narration, wav);
-    timings.push({ scene, wav, seconds: duration(wav) + (scene.tailSeconds ?? 0.8) });
+    if (stage !== "assemble" || !fs.existsSync(wav)) speak(scene.narration, wav);
+    timings.push({ scene, wav, seconds: wavSeconds(wav) + (scene.tailSeconds ?? 0.8) });
   }
 
+  if (stage !== "assemble") await record(timings);
+  if (stage !== "record") assemble(timings, only);
+}
+
+async function record(timings: Array<{ scene: Scene; wav: string; seconds: number }>) {
   console.info(`Recording with ${path.basename(CHROME)} at ${WIDTH}×${HEIGHT}…`);
   const browser = await puppeteer.launch({
     executablePath: CHROME,
@@ -182,15 +212,19 @@ async function main() {
   });
   try {
     const page = await browser.newPage();
+    // tsx (esbuild keepNames) wraps functions in __name(); define it so page.evaluate callbacks run in the page.
+    await page.evaluateOnNewDocument("globalThis.__name = (fn) => fn;");
     await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
     for (const t of timings) {
-      console.info(`  ${t.scene.id} (${t.seconds.toFixed(1)} s)`);
-      await recordScene(page, t.scene, t.seconds, path.join(WORK, `${t.scene.id}.webm`));
+      const frames = await recordScene(page, t.scene, t.seconds, path.join(WORK, t.scene.id));
+      console.info(`  ${t.scene.id}: ${t.seconds.toFixed(1)} s, ${frames} frames`);
     }
   } finally {
     await browser.close();
   }
+}
 
+function assemble(timings: Array<{ scene: Scene; wav: string; seconds: number }>, only: string | undefined) {
   console.info("Assembling…");
   const segments: string[] = [];
   const srt: string[] = [];
@@ -199,7 +233,7 @@ async function main() {
   for (const t of timings) {
     const segment = path.join(WORK, `${t.scene.id}.mp4`);
     ffmpeg([
-      "-i", path.join(WORK, `${t.scene.id}.webm`),
+      "-f", "concat", "-safe", "0", "-i", path.join(WORK, t.scene.id, "frames.txt"),
       "-i", t.wav,
       "-filter_complex",
       `[0:v]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease,pad=${WIDTH}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=0x07101c,fps=30,tpad=stop_mode=clone:stop_duration=5,trim=duration=${t.seconds.toFixed(3)},format=yuv420p[v];` +
@@ -225,7 +259,7 @@ async function main() {
   // Burn the subtitles in (the subtitles filter needs a relative path without a drive colon on Windows).
   fs.copyFileSync(srtFile, path.join(WORK, "subs.srt"));
   const style = "FontName=Arial,FontSize=15,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BackColour=&H90101010,BorderStyle=4,Outline=0,Shadow=0,MarginV=28,MarginL=60,MarginR=60";
-  execFileSync(FFMPEG, ["-hide_banner", "-loglevel", "error", "-y", "-i", "joined.mp4", "-vf", `subtitles=subs.srt:force_style='${style}'`, "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "copy", "-movflags", "+faststart", path.join(OUT, `${name}.mp4`)], { cwd: WORK, stdio: ["ignore", "inherit", "inherit"] });
+  execFileSync(FFMPEG(), ["-hide_banner", "-loglevel", "error", "-y", "-i", "joined.mp4", "-vf", `subtitles=subs.srt:force_style='${style}'`, "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "copy", "-movflags", "+faststart", path.join(OUT, `${name}.mp4`)], { cwd: WORK, stdio: ["ignore", "inherit", "inherit"] });
   console.info(`Done: ${path.relative(process.cwd(), path.join(OUT, `${name}.mp4`))} (${clock.toFixed(0)} s) and ${path.relative(process.cwd(), srtFile)}`);
 }
 
