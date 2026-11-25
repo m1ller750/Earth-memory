@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: earth
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: earth_memory
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U earth -d earth_memory"]
+      interval: 5s
+      retries: 10
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://earth:change-me@db:5432/earth_memory
+      PUBLIC_BASE_URL: http://localhost:3000
+      # XAI_API_KEY or ANTHROPIC_API_KEY: pass from your shell or a secrets manager
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/data
+volumes:
+  pgdata:
+  uploads:
