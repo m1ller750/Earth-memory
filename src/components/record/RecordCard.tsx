@@ -18,6 +18,15 @@ export function RecordCard({ record, t, locale }: { record: RecordListItem; t: D
           // Uploaded media is served by an access-checked route, so next/image optimisation is not used.
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/v1/media/${record.coverMediaId}`} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+        ) : record.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={record.image.url}
+            alt=""
+            loading="lazy"
+            title={`${t.common.photo}: ${record.image.author} · ${record.image.license}`}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          />
         ) : (
           <CoverArt seed={record.slug} dimension={record.dimension} className="h-full w-full transition duration-700 group-hover:scale-[1.04]" />
         )}

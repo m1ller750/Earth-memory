@@ -51,7 +51,17 @@ export default async function LivingEarthPage({ searchParams }: PageProps<"/livi
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((s) => (
             <li key={s.id}>
-              <Link href={`/living-earth/species/${s.slug}`} className="group panel flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-white/20">
+              <Link href={`/living-earth/species/${s.slug}`} className="group panel flex h-full flex-col overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-white/20">
+                {s.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={s.image.url}
+                    alt=""
+                    loading="lazy"
+                    title={`${t.common.photo}: ${s.image.author} · ${s.image.license}`}
+                    className="-mx-5 -mt-5 mb-4 aspect-[16/10] w-[calc(100%+2.5rem)] max-w-none object-cover transition duration-500 group-hover:scale-[1.02]"
+                  />
+                )}
                 <IucnBadge status={s.iucnStatus} t={t} />
                 <h3 className="mt-3 font-display text-2xl font-semibold text-mist-50">{s.commonName}</h3>
                 <p className="text-sm text-mist-400 italic">{s.scientificName}</p>
@@ -68,7 +78,17 @@ export default async function LivingEarthPage({ searchParams }: PageProps<"/livi
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ecosystems.map((e) => (
             <li key={e.id}>
-              <Link href={`/living-earth/ecosystems/${e.slug}`} className="group panel flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-white/20">
+              <Link href={`/living-earth/ecosystems/${e.slug}`} className="group panel flex h-full flex-col overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-white/20">
+                {e.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={e.image.url}
+                    alt=""
+                    loading="lazy"
+                    title={`${t.common.photo}: ${e.image.author} · ${e.image.license}`}
+                    className="-mx-5 -mt-5 mb-4 aspect-[16/10] w-[calc(100%+2.5rem)] max-w-none object-cover transition duration-500 group-hover:scale-[1.02]"
+                  />
+                )}
                 <p className="eyebrow">{e.kind}</p>
                 <h3 className="mt-2 font-display text-2xl font-semibold text-mist-50">{e.name}</h3>
                 <p className="mt-1 text-sm text-dim-natural">{e.statusNote}</p>

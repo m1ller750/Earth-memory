@@ -23,6 +23,7 @@ import {
 } from "@/lib/db/schema";
 import { boundingBox, haversineKm } from "@/lib/geo/distance";
 import { foldForSearch } from "@/lib/text";
+import type { RemoteImage } from "@/lib/db/schema";
 import { buildTsQuery, ftsMatch, ftsRank, fuzzyMatch, fuzzyScore } from "./query";
 
 export const recordListColumns = {
@@ -46,6 +47,7 @@ export const recordListColumns = {
   tags: records.tags,
   createdAt: records.createdAt,
   coverMediaId: sql<string | null>`(select m.id from media m where m.record_id = ${records.id} and m.kind = 'image' order by m.created_at limit 1)`,
+  image: records.image,
 };
 
 export type RecordListItem = {
@@ -69,6 +71,8 @@ export type RecordListItem = {
   tags: string[];
   createdAt: Date;
   coverMediaId: string | null;
+  /** Freely licensed Commons photo (used when no image has been uploaded). */
+  image: RemoteImage | null;
 };
 
 export interface RecordFilters {

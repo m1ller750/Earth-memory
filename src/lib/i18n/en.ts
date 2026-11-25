@@ -45,6 +45,8 @@ export const en = {
     built: "The memory of humanity belongs to humanity.",
   },
   common: {
+    photo: "Photo",
+    photoVia: "via Wikimedia Commons",
     loading: "Loading…",
     viewAll: "View all",
     viewDetails: "View details",

@@ -4,13 +4,14 @@
  * Afterwards the Memory Connection Engine proposes links involving the new records (as
  * "proposed" edges for expert review, never as confirmed facts).
  */
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { buildEngineContext, discoverAll, type EngineRecord } from "../../engine/connections";
 import { fingerprint, recordFingerprintText } from "../../engine/similarity";
 import { countryName } from "../../geo/countries";
 import { buildSearchText } from "../../text";
 import type { Database } from "../client";
 import * as s from "../schema";
+import type { RemoteImage } from "../schema";
 import { REFERENCE_ATTRIBUTION, type ImportedDataset, type SeedSource } from "./types";
 
 export interface ImportResult {
@@ -36,6 +37,29 @@ export interface ImportOptions {
 }
 
 const IMPORTED_ATTRIBUTION_PREFIX = "Text from the Wikipedia article";
+
+/**
+ * Sets the photo of records, species and ecosystems by slug. Existing photos are kept unless
+ * `overwrite` is set, so a photo chosen by an editor is never replaced. Returns how many rows changed.
+ */
+export async function applyImages(db: Database, images: Record<string, RemoteImage>, options: { overwrite?: boolean } = {}): Promise<number> {
+  const tables = { record: s.records, species: s.species, ecosystem: s.ecosystems } as const;
+  let changed = 0;
+  await db.transaction(async (tx) => {
+    for (const [key, image] of Object.entries(images)) {
+      const [type, slug] = key.split(":") as [keyof typeof tables, string];
+      const table = tables[type];
+      if (!table || !slug) continue;
+      const rows = await tx
+        .update(table)
+        .set({ image })
+        .where(options.overwrite ? eq(table.slug, slug) : and(eq(table.slug, slug), isNull(table.image)))
+        .returning({ id: table.id });
+      changed += rows.length;
+    }
+  });
+  return changed;
+}
 
 const placeNames = (codes: string[]) => [codes.map((c) => countryName(c, "en")), codes.map((c) => countryName(c, "ru"))];
 

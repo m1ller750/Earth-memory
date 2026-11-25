@@ -62,6 +62,24 @@ export const LANGUAGE_STATUSES = [
 ] as const;
 export const IUCN_STATUSES = ["EX", "EW", "CR", "EN", "VU", "NT", "LC", "DD"] as const;
 
+/**
+ * A freely licensed photograph hosted on Wikimedia Commons, shown with its credit.
+ * Used for archive records, species and ecosystems (languages keep their generated cover).
+ */
+export interface RemoteImage {
+  /** Where the app serves the photo: a copy in public/photos (960 px JPEG made by `npm run images`). */
+  url: string;
+  width?: number;
+  height?: number;
+  /** Commons file name, e.g. "Okjökull glacier 1986.jpg". */
+  title: string;
+  author: string;
+  license: string;
+  licenseUrl?: string;
+  /** Commons file page, where the full credit and licence live. */
+  sourceUrl: string;
+}
+
 export const roleEnum = pgEnum("role", ROLES);
 export const dimensionEnum = pgEnum("dimension", DIMENSIONS);
 export const recordKindEnum = pgEnum("record_kind", RECORD_KINDS);
@@ -257,6 +275,7 @@ export const species = pgTable(
     scientificName: text("scientific_name").notNull(),
     iucnStatus: iucnStatusEnum("iucn_status").notNull(),
     assessmentNote: text("assessment_note").notNull().default(""),
+    image: jsonb("image").$type<RemoteImage>(),
     taxonGroup: text("taxon_group").notNull(),
     habitat: text("habitat").notNull().default(""),
     countryCodes: textArray("country_codes"),
@@ -289,6 +308,7 @@ export const ecosystems = pgTable(
     lng: doublePrecision("lng"),
     description: text("description").notNull().default(""),
     statusNote: text("status_note").notNull().default(""),
+    image: jsonb("image").$type<RemoteImage>(),
     aliases: textArray("aliases"),
     origin: originEnum("origin").notNull().default("community"),
     verification: verificationEnum("verification").notNull().default("unverified"),
@@ -365,6 +385,8 @@ export const records = pgTable(
     searchText: text("search_text").notNull().default(""),
     /** Character n-gram fingerprint used by the Memory Connection Engine (see lib/engine/similarity). */
     fingerprint: real("fingerprint").array(),
+    /** Freely licensed photo from Wikimedia Commons (uploaded media, when present, take precedence). */
+    image: jsonb("image").$type<RemoteImage>(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

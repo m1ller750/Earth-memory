@@ -11,6 +11,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
+  // Photos from Wikimedia Commons are copied into public/photos, so no external image host is needed.
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "font-src 'self' data:",

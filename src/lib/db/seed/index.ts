@@ -9,8 +9,8 @@ import { buildSearchText } from "../../text";
 import type { Database } from "../client";
 import * as s from "../schema";
 import { EDGES, ENTITIES, PROJECTS } from "./graph";
-import { importDataset } from "./import-dataset";
-import { IMPORTED } from "./imported";
+import { applyImages, importDataset } from "./import-dataset";
+import { IMAGES, IMPORTED } from "./imported";
 import { LANGUAGES, LEXICON } from "./languages";
 import { ECOSYSTEMS, SPECIES } from "./living-earth";
 import { RECORDS } from "./records";
@@ -422,6 +422,9 @@ export async function seedDatabase(db: Database, options: SeedOptions = {}) {
 
   /* Reference data imported from Wikipedia and Wikidata (npm run ingest). */
   if (IMPORTED.generatedAt) await importDataset(db, IMPORTED, { log });
+  /* Freely licensed photos from Wikimedia Commons (npm run images). */
+  const photos = await applyImages(db, IMAGES);
+  if (photos) log(`Added ${photos} photos.`);
 
   log(`Seed finished in ${Date.now() - started} ms.`);
 }

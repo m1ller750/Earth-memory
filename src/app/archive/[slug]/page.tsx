@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CoverArt } from "@/components/brand/CoverArt";
+import { PhotoCredit } from "@/components/brand/Photo";
 import { EvidenceList } from "@/components/connections/Evidence";
 import { DimensionGlyph } from "@/components/brand/DimensionGlyph";
 import { ConnectionDecision, ReportForm, ReviewForm } from "@/components/record/RecordActions";
@@ -83,10 +84,16 @@ export default async function RecordPage({ params }: PageProps<"/archive/[slug]"
         {media.find((m) => m.kind === "image") ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/v1/media/${media.find((m) => m.kind === "image")!.id}`} alt="" className="h-full w-full object-cover opacity-70" />
+        ) : record.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={record.image.url} alt={record.title} className="h-full w-full object-cover opacity-80" />
         ) : (
           <CoverArt seed={record.slug} dimension={record.dimension} width={1600} height={480} className="h-full w-full" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/30 to-transparent" />
+        {record.image && !media.some((m) => m.kind === "image") && (
+          <PhotoCredit image={record.image} t={t} className="absolute top-3 right-4 z-10 max-w-md rounded-md bg-ink-950/70 px-2.5 py-1 text-right backdrop-blur" />
+        )}
       </div>
 
       <Container className="relative -mt-28">

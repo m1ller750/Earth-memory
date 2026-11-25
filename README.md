@@ -71,11 +71,23 @@ Only public, non-sensitive records are ever sent to the provider.
 | `npm run db:reset -- --yes` | Delete all data and reseed |
 | `npm run db:backup` / `db:restore` | See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 
+## Photos
+
+Archive records, species and ecosystems show a photograph when the lead image of their Wikipedia
+article is freely licensed on Wikimedia Commons (CC0, public domain, CC BY, CC BY-SA). `npm run images`
+finds them, copies a 960 px JPEG of each into `public/photos/`, and records the author, licence and
+Commons page in `src/lib/db/seed/images.json`; every photo is shown with that credit. Languages keep
+their generated cover, and so do items whose lead image is not free, is a drawing (SVG) or is
+unsuitable for a card (listed in `NO_PHOTO` in `src/lib/ingest/images.ts`). `npm run db:import`
+applies new photos to an existing database without replacing photos already set.
+
 ## Demo video
 
 `npm run demo:video` records a narrated, subtitled walkthrough of the running app into
 `demo/earth-memory-demo.mp4` (plus `.srt`). It drives your installed Chrome with puppeteer-core at
-1920×1080, narrates with the Windows text-to-speech voice and assembles everything with FFmpeg.
+1920×1080, narrates every subtitle line with the open Kokoro neural voice (`am_michael`, run locally;
+`DEMO_TTS=sapi` falls back to the Windows voice) and assembles everything with FFmpeg. The Synapse
+scene types real `synapse` commands and shows their real output, captured when the video is made.
 Record from a production server (`npm run build && npm start`) so no development overlay appears.
 Scenes and narration live in `scripts/demo/scenes.ts`.
 

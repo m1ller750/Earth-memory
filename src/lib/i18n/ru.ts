@@ -47,6 +47,8 @@ export const ru: Dictionary = {
     built: "Память человечества принадлежит человечеству.",
   },
   common: {
+    photo: "Фото",
+    photoVia: "через Wikimedia Commons",
     loading: "Загрузка…",
     viewAll: "Смотреть все",
     viewDetails: "Подробнее",

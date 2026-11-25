@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { PhotoFigure } from "@/components/brand/Photo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,6 +44,7 @@ export default async function EcosystemPage({ params }: PageProps<"/living-earth
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-12">
+          {e.image && <PhotoFigure image={e.image} alt={e.name} t={t} />}
           <section className="panel p-6 sm:p-8">
             <Prose text={e.description} />
           </section>

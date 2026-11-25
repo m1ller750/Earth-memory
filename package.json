@@ -19,6 +19,7 @@
     "db:restore": "tsx scripts/restore.ts",
     "db:import": "tsx scripts/import-data.ts",
     "ingest": "tsx scripts/ingest.ts",
+    "images": "tsx scripts/images.ts",
     "demo:video": "tsx scripts/demo/make-video.ts",
     "smoke": "tsx scripts/smoke.ts",
     "mcp": "tsx mcp/server.ts",

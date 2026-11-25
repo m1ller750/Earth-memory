@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { articleFromUrl, isFreeLicence, plainCredit, thumbnailUrl } from "@/lib/ingest/images";
 import {
   articleProse,
   claimIdsWithYear,
@@ -183,6 +184,28 @@ describe("lead text", () => {
   it("finds the paragraphs that follow the lead despite spacing differences", () => {
     const prose = ["Martha (c.1885 – September 1, 1914) was a passenger pigeon.", "Next paragraph about the zoo and its visitors in the early twentieth century."];
     expect(continuationAfterLead(prose, ["Martha (c. 1885 – September 1, 1914) was a passenger pigeon."])).toEqual([prose[1]]);
+  });
+});
+
+describe("photos", () => {
+  it("accepts only free licences", () => {
+    for (const ok of ["CC BY-SA 4.0", "CC BY 2.0", "CC0", "Public domain", "CC BY-SA 3.0 igo"]) expect(isFreeLicence(ok)).toBe(true);
+    for (const no of ["Fair use", "Non-free media", "All rights reserved", undefined]) expect(isFreeLicence(no)).toBe(false);
+  });
+
+  it("builds a reachable thumbnail URL at a standard width", () => {
+    expect(thumbnailUrl({ url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Ok_glacier_2003.jpg/1280px-Ok_glacier_2003.jpg", width: 1280 })).toBe(
+      "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Ok_glacier_2003.jpg/960px-Ok_glacier_2003.jpg",
+    );
+    // Small originals live on upload.wikimedia.org, which not every network reaches: use the thumb host.
+    expect(thumbnailUrl({ url: "https://upload.wikimedia.org/wikipedia/commons/0/0c/Kabuki.jpg", width: 350 })).toBe("https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0c/Kabuki.jpg/330px-Kabuki.jpg");
+    expect(thumbnailUrl({ url: "https://upload.wikimedia.org/wikipedia/commons/0/0c/Tiny.jpg", width: 120 })).toBeNull();
+  });
+
+  it("turns Commons HTML credits into plain text", () => {
+    expect(plainCredit('<a href="//commons.wikimedia.org/wiki/User:X">Oddur Sigurðsson</a>')).toBe("Oddur Sigurðsson");
+    expect(plainCredit("Unknown author Unknown author")).toBe("Unknown author");
+    expect(articleFromUrl("https://en.wikipedia.org/wiki/Lake_Nyos_disaster")).toBe("Lake Nyos disaster");
   });
 });
 
