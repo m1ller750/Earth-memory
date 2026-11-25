@@ -90,6 +90,7 @@ function cues(text: string, start: number, length: number): Array<{ from: number
   const parts: string[] = [];
   for (const sentence of sentences) {
     if (sentence.length <= 84) parts.push(sentence);
+    else if (splitAtComma(sentence)) parts.push(...splitAtComma(sentence)!);
     else {
       // Break long sentences at a comma or near the middle word.
       const words = sentence.split(" ");
@@ -111,6 +112,18 @@ function cues(text: string, start: number, length: number): Array<{ from: number
     t += d;
     return cue;
   });
+}
+
+/** Splits a long sentence at a comma (nearest the middle first) where both halves fit on screen. */
+function splitAtComma(sentence: string): [string, string] | null {
+  const commas: number[] = [];
+  for (let i = 0; i < sentence.length; i++) if (sentence[i] === "," || sentence[i] === ":") commas.push(i);
+  commas.sort((x, y) => Math.abs(x - sentence.length / 2) - Math.abs(y - sentence.length / 2));
+  for (const i of commas) {
+    const [a, b] = [sentence.slice(0, i + 1).trim(), sentence.slice(i + 1).trim()];
+    if (a.length <= 84 && b.length <= 84 && a.length > 15 && b.length > 15) return [a, b];
+  }
+  return null;
 }
 
 function wrap(line: string): string {
@@ -258,7 +271,8 @@ function assemble(timings: Array<{ scene: Scene; wav: string; seconds: number }>
   fs.writeFileSync(srtFile, srt.join("\n"), "utf8");
   // Burn the subtitles in (the subtitles filter needs a relative path without a drive colon on Windows).
   fs.copyFileSync(srtFile, path.join(WORK, "subs.srt"));
-  const style = "FontName=Arial,FontSize=15,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BackColour=&H90101010,BorderStyle=4,Outline=0,Shadow=0,MarginV=28,MarginL=60,MarginR=60";
+  // BorderStyle=3 draws an opaque box in OutlineColour (here 40% transparent black) behind each line.
+  const style = "FontName=Arial,FontSize=15,PrimaryColour=&H00FFFFFF,OutlineColour=&H66000000,BorderStyle=3,Outline=6,Shadow=0,MarginV=30,MarginL=60,MarginR=60";
   execFileSync(FFMPEG(), ["-hide_banner", "-loglevel", "error", "-y", "-i", "joined.mp4", "-vf", `subtitles=subs.srt:force_style='${style}'`, "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "copy", "-movflags", "+faststart", path.join(OUT, `${name}.mp4`)], { cwd: WORK, stdio: ["ignore", "inherit", "inherit"] });
   console.info(`Done: ${path.relative(process.cwd(), path.join(OUT, `${name}.mp4`))} (${clock.toFixed(0)} s) and ${path.relative(process.cwd(), srtFile)}`);
 }
