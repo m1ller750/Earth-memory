@@ -26,7 +26,9 @@
     "mcp:check": "tsx scripts/mcp-check.ts",
     "desktop:prepare": "tsx scripts/desktop/prepare.ts",
     "desktop:pack": "electron-builder --win --config electron-builder.yml",
-    "desktop:build": "npm run desktop:prepare && npm run desktop:pack"
+    "desktop:build": "npm run desktop:prepare && npm run desktop:pack",
+    "site:build": "tsx scripts/site/build.ts",
+    "site:vercel": "next build && tsx scripts/site/build.ts --serve"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",
