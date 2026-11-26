@@ -1,0 +1,9 @@
+{
+  "name": "earth-memory-desktop",
+  "productName": "Earth Memory",
+  "version": "0.2.0",
+  "description": "EARTH MEMORY: a living digital memory of humanity and planet Earth (desktop app).",
+  "author": "Earth Memory",
+  "license": "UNLICENSED",
+  "main": "main.cjs"
+}

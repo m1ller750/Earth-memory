@@ -37,6 +37,15 @@ const nextConfig: NextConfig = {
   cacheComponents: false,
   poweredByHeader: false,
   serverExternalPackages: ["@electric-sql/pglite"],
+  // Migrations are read from disk at startup; serverless hosts (Vercel) must ship them with every function.
+  outputFileTracingIncludes: { "*": ["./drizzle/**/*"] },
+  // The desktop app (npm run desktop:build) ships a self-contained server; local data never goes in it.
+  ...(process.env.NEXT_OUTPUT === "standalone"
+    ? {
+        output: "standalone" as const,
+        outputFileTracingExcludes: { "*": ["data/**", "backups/**", "demo/**", "dist-desktop/**", "public/**", ".git/**", "tests/**", "docs/**"] },
+      }
+    : {}),
   turbopack: {
     rules: {
       "*.css": {

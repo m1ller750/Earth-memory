@@ -29,6 +29,7 @@ export const en = {
     more: "More",
     skipToContent: "Skip to content",
     developers: "API & MCP",
+    download: "Download",
     about: "About",
   },
   footer: {

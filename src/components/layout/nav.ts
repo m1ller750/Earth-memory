@@ -20,6 +20,7 @@ export const SECONDARY_NAV: NavItem[] = [
   { href: "/dashboard", label: (t) => t.nav.dashboard },
   { href: "/community", label: (t) => t.nav.community },
   { href: "/developers", label: (t) => t.nav.developers },
+  { href: "/download", label: (t) => t.nav.download },
   { href: "/about", label: (t) => t.nav.about },
 ];
 

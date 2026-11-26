@@ -31,6 +31,7 @@ export const ru: Dictionary = {
     more: "Ещё",
     skipToContent: "Перейти к содержанию",
     developers: "API и MCP",
+    download: "Скачать",
     about: "О проекте",
   },
   footer: {

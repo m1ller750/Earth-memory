@@ -1,0 +1,33 @@
+# Windows installer for the Earth Memory desktop app (npm run desktop:build).
+appId: org.earthmemory.desktop
+electronVersion: 45.5.0
+productName: Earth Memory
+copyright: Earth Memory contributors
+directories:
+  app: desktop
+  output: dist-desktop
+  buildResources: desktop
+files:
+  - main.cjs
+  - icon.png
+  - package.json
+extraResources:
+  - from: .next/standalone
+    to: server
+    filter:
+      - "**/*"
+asar: true
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: desktop/icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Earth Memory
+  artifactName: Earth-Memory-Setup.exe

@@ -23,7 +23,10 @@
     "demo:video": "tsx scripts/demo/make-video.ts",
     "smoke": "tsx scripts/smoke.ts",
     "mcp": "tsx mcp/server.ts",
-    "mcp:check": "tsx scripts/mcp-check.ts"
+    "mcp:check": "tsx scripts/mcp-check.ts",
+    "desktop:prepare": "tsx scripts/desktop/prepare.ts",
+    "desktop:pack": "electron-builder --win --config electron-builder.yml",
+    "desktop:build": "npm run desktop:prepare && npm run desktop:pack"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",
@@ -64,6 +67,8 @@
     "@types/three": "^0.187.0",
     "@types/topojson-client": "^3.1.5",
     "drizzle-kit": "^0.31.11",
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "puppeteer-core": "^24.43.1",

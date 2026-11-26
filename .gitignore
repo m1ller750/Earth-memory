@@ -32,3 +32,10 @@ next-env.d.ts
 
 # rendered demo video (npm run demo:video)
 /demo/
+
+# desktop app build output
+/dist-desktop/
+/desktop/icon.png
+
+# videos (large binaries)
+*.mp4
