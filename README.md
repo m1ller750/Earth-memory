@@ -10,6 +10,18 @@ Earth Memory is a consent-first archive that connects five dimensions of memory 
 | **Memory Alert** | A transparent preservation-priority score for languages, traditions, archives, ecosystems and species: documented threat + documentation gap + single-source risk + verification gap. Not an extinction prediction. |
 | **Earth Memory Timeline** | A zoomable time axis from the 4th millennium BCE to today, with lanes for each dimension and documented ecosystem change, linked to the globe. |
 
+## Try it
+
+| | Link | What it is |
+|---|---|---|
+| **Website** | **https://earth-memory-tau.vercel.app** | Static HTML edition on Vercel: every public page (globe, archive with photos, languages, Living Earth, Memory Alert, timeline, graph) as a read-only snapshot of the online database. Search, EARTH AI, accounts and contributions need the app or a server. |
+| **Windows app** | **[Download Earth-Memory-Setup.exe](https://github.com/m1ller750/Earth-memory/releases/latest/download/Earth-Memory-Setup.exe)** ([all releases](https://github.com/m1ller750/Earth-memory/releases)) | The full application with its own database on your computer: search, EARTH AI (search-only mode unless you add an AI key), contributions and moderation. Windows 10/11, 64-bit. The installer is not code-signed, so Windows SmartScreen may ask you to confirm (More info → Run anyway). |
+
+How they are built:
+
+- **Website**: each Vercel deployment of `main` runs `npm run site:vercel` from `vercel.json`. It builds the app, starts it against the Neon PostgreSQL database in `DATABASE_URL` (a Vercel environment variable, never in the repository), and crawls it into plain HTML in `site/` with `scripts/site/build.ts`. Locally: `npm run build`, `npm start`, then `npm run site:build`.
+- **Windows app**: `npm run desktop:build` bundles the standalone Next.js server and the embedded PGlite database into an Electron app and an NSIS installer in `dist-desktop/`. The archive database is created in `%APPDATA%\Earth Memory\data` on first start.
+
 ## Quick start
 
 Requirements: Node.js 20.9 or newer (developed on Node 26). No database server, Docker or API key is needed.

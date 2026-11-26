@@ -2,6 +2,18 @@
 
 Newest entries first. Each entry records what was built, what was tested and what is still open.
 
+## 2026-11-26: Windows app, static website on Vercel, Neon database
+
+**Built**
+- Desktop app: Electron 45 shell (`desktop/main.cjs`) that forks the standalone Next.js server with its own PGlite database in the user profile; NSIS installer `Earth-Memory-Setup.exe` (`npm run desktop:build`). `/download` page and nav link.
+- Static HTML edition (`scripts/site/build.ts`): crawls the production server into `site/` (1198 pages, 462 of them filter or pagination variants, photos and map data). Graph-focus and map-position queries were dropped from the crawl: they produced 4000+ near-duplicate pages (572 MB). `vercel.json` builds it on Vercel from Neon.
+- Online database: free Neon PostgreSQL 17 (`aws-us-east-1`), migrated and seeded with the full reference dataset (256 records, 265 photos). Demo accounts created by the seed were deleted from it.
+
+**Tested**
+- Static site served locally like Vercel (`cleanUrls`): globe, archive, pagination (`/archive?page=2` → pre-rendered file), record pages with photos, no console errors, no API calls.
+- `site:build --serve` starts and stops its own server; standalone desktop server boots from an empty data folder and seeds itself.
+- Vercel production build from GitHub (`7d36f51`) against Neon: READY in about 2 minutes; https://earth-memory-tau.vercel.app serves the home page, archive, record pages with photos, languages and `/download`, with no console errors and no localhost links.
+
 ## 2026-11-25: EARTH AI live test, GitHub, demo video
 
 **AI provider.** The Grok keys supplied were not xAI keys (one from grok-api.com only had a video

@@ -12,7 +12,22 @@
 3. `npm ci && npm run build && npm run db:migrate && npm start`.
    Reference data is seeded on first start when the archive is empty (`AUTO_SEED=false` disables this).
 
-The node-postgres path uses the same Drizzle schema and migrations as the embedded database. It has been type-checked but **not yet run against a standalone PostgreSQL server** in this environment (no PostgreSQL or Docker was available). Run `npm run smoke` against the deployed instance once.
+The node-postgres path uses the same Drizzle schema and migrations as the embedded database. It has run against Neon (PostgreSQL 17): migrations, the full reference seed and the static-site crawl below.
+
+## Static website on Vercel (Neon database)
+
+The public website is the static HTML edition, not the server app:
+
+- **Database**: a free Neon PostgreSQL project (`aws-us-east-1`), seeded once with `DATABASE_URL=… AUTO_SEED=true` and then left read-only for the site. The demo accounts that a non-production seed creates were deleted from it; never leave them on a public database.
+- **Vercel project** `earth-memory` (team EAM): `vercel.json` sets `framework: null`, `buildCommand: npm run site:vercel` and `outputDirectory: site`. The build runs `next build`, starts `next start` against `DATABASE_URL` and crawls every public page into `site/` (`scripts/site/build.ts`), then Vercel serves the HTML with `cleanUrls`.
+- **Environment variables** (Production and Preview): `DATABASE_URL` (Neon direct endpoint, `sslmode=require`, stored as *sensitive*), `AUTO_SEED=false`, `DATABASE_POOL_SIZE=4`, `ELECTRON_SKIP_BINARY_DOWNLOAD=1`, `PUPPETEER_SKIP_DOWNLOAD=1`, `NEXT_TELEMETRY_DISABLED=1`. No AI key is set: the static site has no server to call it.
+- **What the static edition leaves out**: sign-in, contribute, review and moderation pages, and `/api/*`. `static-edition.js` maps filter and pagination links to their pre-rendered files, answers API calls with a read-only notice and shows a banner linking the desktop app. Other query strings (graph focus, map position) fall back to the plain page.
+- Public address: https://earth-memory-tau.vercel.app (production domain). The team-scoped `*-eam17.vercel.app` aliases sit behind Vercel's standard deployment protection.
+- Deployments are created from the public GitHub repository through the Vercel API or dashboard (Redeploy). The Vercel GitHub app is not installed, so a push alone does not deploy; install it on the repository to deploy every push to `main` automatically. Redeploy after changing the data too.
+
+## Windows desktop app
+
+`npm run desktop:build` runs `scripts/desktop/prepare.ts` (standalone Next.js server, static assets, migrations, PGlite, icon) and electron-builder (`electron-builder.yml`, NSIS, x64). The app forks the bundled server with `ELECTRON_RUN_AS_NODE=1`, keeps its database in `%APPDATA%\Earth Memory\data` and logs to `server.log` next to it. On a slow connection, download `electron-v45.5.0-win32-x64.zip` yourself, extract it and pass `-c.electronDist=<folder>` to electron-builder. Publish `dist-desktop/Earth-Memory-Setup.exe` as a GitHub release asset with that exact name: the `/download` page links to `releases/latest/download/Earth-Memory-Setup.exe`.
 
 ## Docker
 
