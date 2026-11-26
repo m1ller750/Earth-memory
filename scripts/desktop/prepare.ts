@@ -58,6 +58,25 @@ copy(path.join(root, "node_modules", "@electric-sql", "pglite"), path.join(stand
 const keep = new Set(["server.js", "package.json", ".next", "node_modules", "public", "drizzle"]);
 for (const entry of fs.readdirSync(standalone)) if (!keep.has(entry)) fs.rmSync(path.join(standalone, entry), { recursive: true, force: true });
 
+// Turbopack links server externals as hashed symlinks (.next/node_modules/pg-<hash> -> node_modules/pg).
+// Links do not survive packaging on Windows (7-Zip cannot follow them), so each becomes a real copy.
+function dereferenceLinks(dir: string): number {
+  let replaced = 0;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      const target = fs.realpathSync(file);
+      fs.rmSync(file, { force: true });
+      fs.cpSync(target, file, { recursive: true, dereference: true });
+      replaced++;
+    } else if (entry.isDirectory()) {
+      replaced += dereferenceLinks(file);
+    }
+  }
+  return replaced;
+}
+console.info(`Replaced ${dereferenceLinks(standalone)} symlinks with copies.`);
+
 (async () => {
   await renderIcon(path.join(root, "src", "app", "icon.svg"), path.join(root, "desktop", "icon.png"));
 
